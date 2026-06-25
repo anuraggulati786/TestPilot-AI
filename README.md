@@ -6,7 +6,7 @@ TestPilot AI is a full-stack web application that takes any public GitHub reposi
 
 ---
 
-## 🚀 Why This Project Stands Out (for Interviews)
+## 🚀 Demonstration and Tech Stack
 
 | Aspect | What It Demonstrates |
 |---|---|
