@@ -1,0 +1,24 @@
+{
+    "name": "example/php-test-fixture",
+    "description": "PHP test fixture with passing and failing tests",
+    "type": "project",
+    "require": {
+        "php": ">=8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Example\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Example\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
