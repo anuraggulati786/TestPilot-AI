@@ -32,26 +32,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Rust fixtures
-fixtures/rust/target/
-
-# Java fixtures
-fixtures/java-maven/target/
-fixtures/java-gradle/.gradle/
-fixtures/java-gradle/build/
-
-# Python fixtures
-fixtures/python/__pycache__/
-fixtures/python/*.egg-info/
-fixtures/python/.pytest_cache/
-fixtures/python/.venv/
-
-# Ruby fixtures
-fixtures/ruby/.bundle/
-fixtures/ruby/vendor/bundle/
-
-# PHP fixtures
-fixtures/php/vendor/
-
 # Coverage
 coverage/

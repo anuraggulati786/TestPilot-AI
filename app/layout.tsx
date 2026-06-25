@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Auto Test & Fix — AI-Powered Test Failure Analyzer",
+  title: "TestPilot AI — AI-Powered Test Failure Analyzer",
   description:
-    "Clone any GitHub repo, run its test suite, and get AI-powered fix suggestions for failing tests. Supports JavaScript, Python, Rust, Go, Java, Ruby, and PHP projects.",
+    "Analyze any GitHub repo's test suite with AI-powered failure diagnosis and fix suggestions. Supports JavaScript, Python, Rust, Go, Java, Ruby, and PHP projects.",
   openGraph: {
-    title: "Auto Test & Fix",
+    title: "TestPilot AI",
     description:
-      "Clone any GitHub repo, run tests, and get AI-powered fix suggestions.",
+      "Analyze any GitHub repo's test suite with AI-powered failure diagnosis.",
     type: "website",
   },
 };

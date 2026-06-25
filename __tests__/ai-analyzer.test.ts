@@ -122,6 +122,6 @@ describe("analyzeErrors", () => {
     const result = await analyzeErrors("stderr", "stdout", []);
 
     expect(result).toHaveLength(1);
-    expect(result[0].explanation).toContain("GEMINI_API_KEY is not configured");
+    expect(result[0].explanation).toContain("No AI API key configured");
   });
 });

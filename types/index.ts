@@ -38,7 +38,7 @@ export interface TestFailure {
 }
 
 export interface TestSuiteResult {
-  /** Display name for the suite (e.g. "JavaScript (fixtures/javascript)") */
+  /** Display name for the suite (e.g. "JavaScript (src/utils)") */
   name: string;
   /** Detected runner type */
   runner: TestRunner;

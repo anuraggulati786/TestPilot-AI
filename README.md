@@ -1,290 +1,297 @@
-# 🧪 Auto Test & Fix
+# 🤖 TestPilot AI
 
-**Clone any GitHub repo, run its test suite, and get AI-powered fix suggestions for failing tests.**
+> **AI-powered test failure analysis for any GitHub repository — across 8 languages.**
 
-Auto Test & Fix is a web app that securely clones a GitHub repository into a cloud sandbox, auto-detects the test runner, executes the test suite, and uses Google Gemini AI to analyze failures and suggest fixes.
+TestPilot AI is a full-stack web application that takes any public GitHub repository URL, securely clones it into a cloud sandbox, auto-detects the test runner, executes the test suite, and leverages **Google Gemini AI** to analyze failures and suggest precise code fixes — all presented in a polished, dark-mode UI.
 
 ---
 
-## How It Works
+## 🚀 Why This Project Stands Out (for Interviews)
+
+| Aspect | What It Demonstrates |
+|---|---|
+| **Full-Stack Ownership** | End-to-end: Next.js frontend → API routes → E2B cloud sandbox → Google Gemini → response rendering |
+| **System Design** | Orchestrates 4+ external services (GitHub, E2B, Gemini, npm/pip/cargo) into a cohesive pipeline |
+| **Multi-Language Support** | Parses and runs tests for JavaScript, Python, Rust, Go, Java (Maven + Gradle), Ruby, and PHP |
+| **Resilience & Error Handling** | Graceful fallbacks across AI providers, network timeouts, sandbox cleanup, and per-suite error isolation |
+| **Developer Experience** | Auto-detects package managers (npm/pnpm/yarn), test frameworks, and install commands — zero config needed |
+| **Security-Conscious** | Uses ephemeral E2B sandboxes with auto-kill, shallow clones (`--depth 1`), and no persistent storage |
+| **AI Integration** | Structured JSON prompting, response parsing with regex fallbacks, and multi-provider support (Gemini + OpenAI-compatible) |
+
+---
+
+## 🧠 Architecture Overview
 
 ```
-User enters GitHub URL
-        │
-        ▼
-┌─────────────────────────────────┐
-│  1. Secure E2B Sandbox Created  │
-│  2. Repository Cloned (--depth 1)│
-└──────────┬──────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────┐
-│  3. Detect Test Runner          │
-│     ├─ package.json → npm test  │
-│     ├─ Cargo.toml → cargo test  │
-│     ├─ go.mod → go test ./...   │
-│     └─ ... (8 runners total)    │
-└──────────┬──────────────────────┘
-           │
-           ▼
-┌─────────────────────────────────┐
-│  4. Install Dependencies         │
-│  5. Run Test Suite               │
-└──────────┬──────────────────────┘
-           │
-      ┌────┴────┐
-      ▼         ▼
-   Passed?    Failed?
-      │         │
-      │         ▼
-      │    ┌─────────────────────────┐
-      │    │  6. Parse Errors         │
-      │    │  7. Read Failing Files   │
-      │    │  8. Gemini AI Analysis   │
-      │    │  9. Suggest Fixes        │
-      │    └──────────┬──────────────┘
-      │               │
-      └───────┬───────┘
-              ▼
-     ┌─────────────────┐
-     │  Display Results │
-     │  + Suggested Fix │
-     └─────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                   Browser (Client)                   │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  Next.js App (React 19 + Tailwind CSS v4)    │   │
+│  │  - Dark mode UI with glassmorphism            │   │
+│  │  - Real-time loading states                   │   │
+│  │  - Collapsible result sections                │   │
+│  │  - One-click fix copy                         │   │
+│  └──────────────┬───────────────────────────────┘   │
+│                 │ POST /api/test                     │
+│                 ▼                                    │
+│  ┌──────────────────────────────┐                   │
+│  │  Next.js API Route           │                   │
+│  │  - Validates GitHub URL      │                   │
+│  │  - Delegates to sandbox lib  │                   │
+│  └──────────────┬───────────────┘                   │
+└─────────────────┼────────────────────────────────────┘
+                  │
+                  ▼
+┌──────────────────────────────────────────────────────┐
+│  E2B Cloud Sandbox (ephemeral, auto-killed)          │
+│                                                       │
+│  1. git clone --depth 1 <repo>                        │
+│  2. find config files (package.json, Cargo.toml, etc) │
+│  3. Detect test runner (npm/pytest/cargo/go/maven...) │
+│  4. Install dependencies                              │
+│  5. Run tests                                         │
+│  6. Return stdout + stderr                            │
+└──────────────────────┬───────────────────────────────┘
+                       │
+                       ▼
+┌──────────────────────────────────────────────────────┐
+│  Server-side Processing                               │
+│                                                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │
+│  │ test-detector│  │ error-parser │  │ai-analyzer │ │
+│  │ (regex-based │  │ (stack trace │  │ (Gemini    │ │
+│  │  runner      │  │  parsing)    │  │  prompt +  │ │
+│  │  detection)  │  │              │  │  parse)    │ │
+│  └──────────────┘  └──────────────┘  └────────────┘ │
+└──────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Features
+## 🧩 Tech Stack Breakdown
 
-- ✅ **8 language support** — JavaScript, Python, Rust, Go, Java, Gradle, Ruby, PHP
-- 🔒 **Secure sandbox** — Each run happens in an isolated E2B cloud sandbox, auto-killed after 5 minutes
-- 🤖 **AI-powered analysis** — Google Gemini analyzes test failures and suggests specific code fixes
-- 📋 **One-click copy** — Copy suggested fixes directly from the UI
-- 📦 **Auto dependency install** — Detects and installs project dependencies automatically
-- 🧠 **Smart error parsing** — Handles Jest, Pytest output formats
+### Frontend
 
----
+| Technology | Purpose | Why It Was Chosen |
+|---|---|---|
+| **Next.js 15 (App Router)** | Full-stack React framework | Server components + API routes in one project; built-in SSR/SSG |
+| **React 19** | UI library | Latest with improved hooks and concurrent features |
+| **TypeScript** | Type safety | Catches bugs at compile time; better DX with IDE autocomplete |
+| **Tailwind CSS v4** | Styling | Utility-first, fast iteration, small bundle with JIT |
 
-## Tech Stack
+### Backend
+
+| Technology | Purpose | Why It Was Chosen |
+|---|---|---|
+| **Next.js API Routes** | Serverless API endpoints | Co-located with frontend; no separate backend needed |
+| **E2B Sandbox** | Secure cloud execution | Isolated environment with auto-cleanup; no Docker setup needed |
+| **Google Gemini 2.5 Flash** | AI error analysis | Fast, cheap, native JSON mode — no fine-tuning needed |
+
+### Testing
 
 | Technology | Purpose |
-|------------|---------|
-| **Next.js 15** (App Router) | Web framework |
-| **TypeScript** | Type safety |
-| **Tailwind CSS v4** | Styling |
-| **E2B** | Secure cloud sandbox |
-| **Google Gemini 2.0 Flash** | AI error analysis |
-| **Jest** | Unit testing |
-| **Vercel** | Deployment |
+|---|---|
+| **Jest 29** | Unit testing for parsing and detection logic |
+| **next/jest** | Seamless Next.js + Jest integration |
+
+### DevOps
+
+| Technology | Purpose |
+|---|---|
+| **Vercel** | One-click deployment with auto HTTPS |
+| **GitHub** | Source control |
 
 ---
 
-## Prerequisites
-
-- **Node.js 18+**
-- **E2B API Key** — [Sign up free](https://e2b.dev/dashboard) (free credits included)
-- **Google Gemini API Key** — [Get one free](https://aistudio.google.com/app/apikey) (generous free tier)
-
----
-
-## Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/your-username/auto-test-fix.git
-cd auto-test-fix
-```
-
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Set up environment variables
-
-```bash
-cp .env.local .env.local
-```
-
-Edit `.env.local` and add your API keys:
-
-```env
-E2B_API_KEY=e2b_your_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-### 4. Run the development server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### 5. Run tests
-
-```bash
-npm test
-```
-
----
-
-## API Reference
-
-### `POST /api/test`
-
-Analyzes a GitHub repository's test suite.
-
-#### Request Body
-
-```json
-{
-  "repoUrl": "https://github.com/user/repo"
-}
-```
-
-#### Success Response (Tests Pass)
-
-```json
-{
-  "success": true,
-  "summary": {
-    "total": 10,
-    "passed": 10,
-    "failed": 0,
-    "status": "passed"
-  },
-  "logs": {
-    "stdout": "...",
-    "stderr": ""
-  }
-}
-```
-
-#### Success Response (Tests Fail with AI Analysis)
-
-```json
-{
-  "success": false,
-  "summary": {
-    "total": 3,
-    "passed": 0,
-    "failed": 3,
-    "status": "failed"
-  },
-  "failures": [
-    {
-      "test": "should return user data",
-      "file": "src/user.test.ts",
-      "line": 42,
-      "error": "expect(received).toBe(expected)",
-      "explanation": "The function returns a string but the test expects a number...",
-      "suggestedFix": "return Number(value);"
-    }
-  ],
-  "logs": {
-    "stdout": "...",
-    "stderr": "..."
-  }
-}
-```
-
-#### Error Response
-
-```json
-{
-  "success": false,
-  "error": "Failed to clone repository: ..."
-}
-```
-
----
-
-## Supported Languages & Test Runners
-
-| Language | File Marker | Test Runner | Install Command |
-|----------|-------------|-------------|-----------------|
-| JavaScript/TypeScript | `package.json` | npm test | `npm install` |
-| Python | `requirements.txt` | pytest | `pip install -r requirements.txt` |
-| Python (modern) | `pyproject.toml` | pytest | `pip install -e .` |
-| Rust | `Cargo.toml` | cargo test | _(none)_ |
-| Go | `go.mod` | go test ./... | `go mod download` |
-| Java (Maven) | `pom.xml` | mvn test | _(none)_ |
-| Java (Gradle) | `build.gradle` | gradle test | _(none)_ |
-| Ruby | `Gemfile` | bundle exec rspec | `bundle install` |
-| PHP | `composer.json` | phpunit | `composer install` |
-
----
-
-## Project Structure
+## 📁 Project Structure
 
 ```
-auto-test-fix/
+testpilot-ai/
 ├── app/
-│   ├── layout.tsx          # Root layout with metadata
-│   ├── page.tsx            # Main UI (client component)
-│   ├── globals.css         # Tailwind CSS v4 global styles
-│   └── api/test/route.ts   # POST endpoint for testing
+│   ├── layout.tsx           # Root layout with SEO metadata
+│   ├── page.tsx             # Main UI (client component)
+│   ├── globals.css          # Tailwind CSS v4 with custom theme
+│   └── api/
+│       ├── test/route.ts    # POST /api/test — runs tests
+│       └── verify-key/route.ts  # GET /api/verify-key — diagnostics
 ├── lib/
-│   ├── sandbox.ts          # E2B sandbox orchestration
-│   ├── test-detector.ts    # Auto-detect test runner
-│   ├── error-parser.ts     # Parse stderr for errors
-│   └── ai-analyzer.ts      # Gemini AI analysis
+│   ├── sandbox.ts           # E2B orchestration (clone → detect → run → analyze)
+│   ├── test-detector.ts     # Auto-detect test runner from config files
+│   ├── error-parser.ts      # Parse stderr for file:line errors
+│   └── ai-analyzer.ts       # Gemini API prompt + response parsing
 ├── types/
-│   └── index.ts            # TypeScript interfaces
+│   └── index.ts             # TypeScript interfaces
 ├── __tests__/
 │   ├── test-detector.test.ts
 │   ├── error-parser.test.ts
 │   └── ai-analyzer.test.ts
-├── next.config.ts          # Next.js configuration
-├── jest.config.ts          # Jest configuration
-├── jest.setup.ts           # Jest setup
-├── postcss.config.mjs      # PostCSS for Tailwind
-├── tsconfig.json           # TypeScript configuration
-├── .env.local              # Environment variables template
+├── next.config.ts            # E2B server external packages
+├── jest.config.ts            # Jest with next/jest
+├── jest.setup.ts             # Test setup
+├── tsconfig.json             # TypeScript config
 └── package.json
 ```
 
 ---
 
-## Deployment
+## 🔧 Key Technical Decisions
 
-### Deploy to Vercel
+### 1. Why E2B over Docker or local execution?
+- **Zero infrastructure** — no Docker daemon, no VM setup
+- **Auto-cleanup** — sandboxes are killed after each run, preventing resource leaks
+- **Scales to zero** — pay only when used
 
-1. **Push to GitHub**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/your-username/auto-test-fix.git
-   git push -u origin main
-   ```
+### 2. Why Gemini over other AI models?
+- **Native JSON mode** — `responseMimeType: "application/json"` guarantees structured output
+- **Generous free tier** — 60 requests/minute on the free plan
+- **Fast inference** — 2.5 Flash models respond in under 2 seconds for most prompts
 
-2. **Connect to Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New" → "Project"
-   - Import your GitHub repository
-   - Keep all default settings (Next.js is auto-detected)
-   - Click "Deploy"
+### 3. Why sandbox-based test execution?
+- **Security** — malicious `package.json` scripts can't access the host machine
+- **Isolation** — each repo runs in its own sandbox, no cross-contamination
+- **Reproducibility** — clean environment every time
 
-3. **Set environment variables** in Vercel dashboard:
-   - `E2B_API_KEY` — Your E2B API key
-   - `GEMINI_API_KEY` — Your Google Gemini API key
+### 4. Multi-provider AI fallback
+The `ai-analyzer.ts` supports both Gemini SDK and OpenAI-compatible APIs. If one provider fails, it automatically falls back to the other — ensuring the app works even if one service is down.
 
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit changes: `git commit -am 'Add my feature'`
-4. Push: `git push origin feature/my-feature`
-5. Open a Pull Request
+### 5. Recursive multi-suite detection
+The app doesn't just look for test configs at the root — it recursively scans all subdirectories. This means monorepos and projects with multiple test suites are fully supported.
 
 ---
 
-## License
+## 🏃 How to Use
+
+### Prerequisites
+- **Node.js 18+**
+- **E2B API key** — [Get one free](https://e2b.dev)
+- **Google Gemini API key** — [Get one free](https://aistudio.google.com/app/apikey)
+
+### Quick Start
+
+```bash
+# 1. Clone & install
+git clone <your-repo-url>
+cd testpilot-ai
+npm install
+
+# 2. Set up API keys
+echo "GEMINI_API_KEY=your_key_here" >> .env.local
+echo "E2B_API_KEY=e2b_your_key_here" >> .env.local
+
+# 3. Start dev server
+npm run dev
+
+# 4. Open http://localhost:3000
+#    Paste a GitHub repo URL → click "Run Tests"
+```
+
+### Scripts
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start Next.js dev server |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm test` | Run unit tests |
+| `npm run typecheck` | TypeScript type checking |
+| `npm run lint` | ESLint check |
+
+---
+
+## 📡 API Reference
+
+### `POST /api/test`
+
+Analyzes a GitHub repository's test suite.
+
+**Request:**
+```json
+{ "repoUrl": "https://github.com/user/repo" }
+```
+
+**Response (failure with AI analysis):**
+```json
+{
+  "success": false,
+  "summary": { "total": 5, "passed": 2, "failed": 3, "status": "failed" },
+  "suites": [
+    {
+      "name": "Jest (root)",
+      "runner": "npm",
+      "summary": { "total": 5, "passed": 2, "failed": 3, "status": "failed" },
+      "failures": [
+        {
+          "test": "should return user data",
+          "file": "src/user.test.ts",
+          "line": 42,
+          "error": "expect(received).toBe(expected)",
+          "explanation": "The function returns a string but expects a number...",
+          "suggestedFix": "return Number(value);"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### `GET /api/verify-key`
+
+Tests if your AI API keys are configured and working.
+
+---
+
+## 🧪 Supported Languages & Test Runners
+
+| Language | Detected By | Runner |
+|---|---|---|
+| JavaScript / TypeScript | `package.json` | `npm test` / `pnpm test` / `yarn test` |
+| Python | `requirements.txt` / `pyproject.toml` | `pytest` |
+| Rust | `Cargo.toml` | `cargo test` |
+| Go | `go.mod` | `go test ./...` |
+| Java (Maven) | `pom.xml` | `mvn test` |
+| Java (Gradle) | `build.gradle` | `gradle test` |
+| Ruby | `Gemfile` | `bundle exec rspec` |
+| PHP | `composer.json` | `phpunit` |
+
+---
+
+## ⚡ Performance Considerations
+
+- **Shallow clones** (`--depth 1`) minimize clone time for large repos
+- **10-minute sandbox timeout** handles monorepos with multiple suites
+- **File content truncation** (15K chars) keeps Gemini prompts under token limits
+- **Parallel suite execution** could be added as a future optimization
+
+---
+
+## 🚢 Deployment
+
+### Deploy to Vercel (Recommended)
+
+```bash
+# Push to GitHub first
+git init && git add . && git commit -m "Initial commit"
+git remote add origin https://github.com/your-username/testpilot-ai.git
+git push -u origin main
+```
+
+Then connect your GitHub repo to [Vercel](https://vercel.com) and add these environment variables:
+- `GEMINI_API_KEY`
+- `E2B_API_KEY`
+
+---
+
+## 📈 Future Improvements
+
+- [ ] **Local rule-based fallback** — analyze common errors without any AI API call
+- [ ] **WebSocket streaming** — stream test output in real-time during execution
+- [ ] **Diff view** — show suggested fix as a unified diff against the original code
+- [ ] **Test history** — save and compare results across runs
+- [ ] **Auto-fix PR** — create a GitHub PR with the suggested fix applied
+- [ ] **Parallel suite execution** — run independent suites concurrently
+
+---
+
+## 📄 License
 
 MIT

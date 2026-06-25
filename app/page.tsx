@@ -8,6 +8,42 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [keyStatus, setKeyStatus] = useState<{ checking: boolean; result: string | null; valid: boolean | null }>({
+    checking: false,
+    result: null,
+    valid: null,
+  });
+
+  const checkApiKey = useCallback(async () => {
+    setKeyStatus({ checking: true, result: null, valid: null });
+    try {
+      const res = await fetch("/api/verify-key");
+      const data = await res.json();
+      if (data.valid) {
+        setKeyStatus({
+          checking: false,
+          result: data.message || "API key is working!",
+          valid: true,
+        });
+      } else {
+        let msg = data.error || "Unknown error";
+        if (data.hint) {
+          msg += `\n\n💡 ${data.hint}`;
+        }
+        setKeyStatus({
+          checking: false,
+          result: msg,
+          valid: false,
+        });
+      }
+    } catch {
+      setKeyStatus({
+        checking: false,
+        result: "Network error: could not reach the server.",
+        valid: false,
+      });
+    }
+  }, []);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
@@ -54,11 +90,11 @@ export default function Home() {
             <span className="text-4xl">🧪</span>
             <div>
               <h1 className="text-2xl font-bold text-white sm:text-3xl">
-                Auto Test & Fix
+                TestPilot AI
               </h1>
               <p className="text-sm text-slate-400">
-                Clone any GitHub repo, run its tests, and get AI-powered fix
-                suggestions
+                Analyze any GitHub repo's test suite with AI-powered failure
+                diagnosis and fix suggestions
               </p>
             </div>
           </div>
@@ -198,6 +234,51 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Diagnostics Section */}
+        <section className="mb-8">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6">
+            <details className="group">
+              <summary className="cursor-pointer text-sm font-medium text-slate-400 transition-colors hover:text-white">
+                <span className="group-open:hidden">▶</span>
+                <span className="hidden group-open:inline">▼</span> Diagnostics
+              </summary>
+              <div className="mt-4 space-y-3">
+                <p className="text-xs text-slate-500">
+                  Test if your Gemini API key is working correctly before running tests.
+                </p>
+                <button
+                  onClick={checkApiKey}
+                  disabled={keyStatus.checking}
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {keyStatus.checking ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Checking...
+                    </>
+                  ) : (
+                    "Verify API Key"
+                  )}
+                </button>
+                {keyStatus.result && (
+                  <div
+                    className={`rounded-lg border p-3 text-sm ${
+                      keyStatus.valid
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                        : "border-red-500/30 bg-red-500/10 text-red-300"
+                    }`}
+                  >
+                    {keyStatus.result}
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+        </section>
+
         {/* Error Banner */}
         {error && (
           <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
@@ -304,7 +385,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-white/10 py-6 text-center text-sm text-slate-500">
-        <p>Auto Test & Fix — Powered by E2B Sandbox &amp; Google Gemini AI</p>
+        <p>TestPilot AI — Powered by E2B Sandbox &amp; Google Gemini AI</p>
       </footer>
     </div>
   );
