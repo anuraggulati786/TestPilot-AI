@@ -37,11 +37,33 @@ export interface TestFailure {
   suggestedFix: string;
 }
 
+export interface TestSuiteResult {
+  /** Display name for the suite (e.g. "JavaScript (fixtures/javascript)") */
+  name: string;
+  /** Detected runner type */
+  runner: TestRunner;
+  /** Working directory relative to repo root */
+  workDir: string;
+  /** Test summary with correct counts */
+  summary: TestSummary;
+  /** Individual failures with AI analysis */
+  failures: TestFailure[];
+  /** Raw test output */
+  logs: TestLogs;
+}
+
 export interface TestResult {
+  /** Whether ALL tests across ALL suites passed */
   success: boolean;
+  /** Overall aggregated summary across all suites */
   summary?: TestSummary;
+  /** Per-suite results */
+  suites?: TestSuiteResult[];
+  /** Flattened failures from all suites (for backward compat / quick access) */
   failures?: TestFailure[];
+  /** Aggregated logs from all suites */
   logs?: TestLogs;
+  /** Top-level error (before tests even ran) */
   error?: string;
 }
 

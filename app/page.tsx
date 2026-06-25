@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, type FormEvent } from "react";
-import type { TestResult, TestFailure } from "@/types";
+import type { TestResult, TestFailure, TestSuiteResult } from "@/types";
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
@@ -41,6 +41,9 @@ export default function Home() {
     },
     [repoUrl]
   );
+
+  const hasFailures =
+    result?.failures && result.failures.length > 0;
 
   return (
     <div className="min-h-screen">
@@ -231,8 +234,7 @@ export default function Home() {
             </div>
             <h3 className="mb-2 font-semibold text-white">Running Tests...</h3>
             <p className="text-sm text-slate-400">
-              Cloning repository → Installing dependencies → Running tests → AI
-              analysis
+              Scanning all subdirectories → Installing dependencies → Running test suites → AI analysis
             </p>
           </div>
         )}
@@ -240,133 +242,61 @@ export default function Home() {
         {/* Results */}
         {result && !loading && (
           <>
-            {/* Summary Banner */}
-            <div
-              className={`mb-6 rounded-xl border p-6 ${
-                result.success
-                  ? "border-emerald-500/30 bg-emerald-500/10"
-                  : "border-red-500/30 bg-red-500/10"
-              }`}
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">
-                    {result.success ? "✅" : "❌"}
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">
-                      {result.success
-                        ? "All Tests Passed!"
-                        : "Tests Failed"}
-                    </h2>
-                    {result.summary && (
-                      <p className="text-sm text-slate-400">
-                        {result.summary.total} test
-                        {result.summary.total !== 1 ? "s" : ""} total
-                        {result.summary.passed > 0 && (
-                          <>
-                            {" "}
-                            ·{" "}
-                            <span className="text-emerald-400">
-                              {result.summary.passed} passed
-                            </span>
-                          </>
-                        )}
-                        {result.summary.failed > 0 && (
-                          <>
-                            {" "}
-                            ·{" "}
-                            <span className="text-red-400">
-                              {result.summary.failed} failed
-                            </span>
-                          </>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {result.summary && (
-                  <div className="flex gap-3">
-                    <div className="rounded-lg bg-white/5 px-4 py-2 text-center">
-                      <div className="text-2xl font-bold text-emerald-400">
-                        {result.summary.passed}
-                      </div>
-                      <div className="text-xs text-slate-500">Passed</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 px-4 py-2 text-center">
-                      <div className="text-2xl font-bold text-red-400">
-                        {result.summary.failed}
-                      </div>
-                      <div className="text-xs text-slate-500">Failed</div>
-                    </div>
-                    <div className="rounded-lg bg-white/5 px-4 py-2 text-center">
-                      <div className="text-2xl font-bold text-white">
-                        {result.summary.total}
-                      </div>
-                      <div className="text-xs text-slate-500">Total</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* ===== OVERALL SUMMARY BANNER ===== */}
+            <OverallSummaryBanner result={result} />
 
-            {/* Error if no failures parsed */}
+            {/* Error if no failures parsed and no suites */}
             {!result.success &&
-              (!result.failures || result.failures.length === 0) &&
+              !hasFailures &&
+              !result.suites?.length &&
               result.error && (
                 <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                  <h3 className="mb-2 font-semibold text-red-300">
-                    Error Details
-                  </h3>
+                  <h3 className="mb-2 font-semibold text-red-300">Error Details</h3>
                   <pre className="max-h-60 overflow-auto rounded-lg bg-black/40 p-4 text-sm text-red-200">
                     {result.error}
                   </pre>
                 </div>
               )}
 
-            {/* Test Logs */}
-            {result.logs && (
+            {/* ===== PER-SUITE RESULTS ===== */}
+            {result.suites && result.suites.length > 0 && (
+              <div className="mb-8 space-y-6">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <span className="text-xl">📊</span>
+                  Test Suites ({result.suites.length})
+                </h2>
+                {result.suites.map((suite, i) => (
+                  <SuiteCard key={i} suite={suite} index={i} />
+                ))}
+              </div>
+            )}
+
+            {/* ===== RAW TEST LOGS ===== */}
+            {result.logs && (result.logs.stdout || result.logs.stderr) && (
               <details className="group mb-6">
                 <summary className="cursor-pointer rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-white/10">
                   <span className="group-open:hidden">▶</span>
-                  <span className="hidden group-open:inline">▼</span> View Raw
-                  Test Output
+                  <span className="hidden group-open:inline">▼</span> View Raw Test Output
                 </summary>
                 <div className="mt-2 rounded-lg border border-white/10 bg-black/40 p-4">
                   {result.logs.stdout && (
                     <div className="mb-4">
-                      <h4 className="mb-1 text-xs font-semibold text-slate-500 uppercase">
-                        stdout
-                      </h4>
-                      <pre className="max-h-48 overflow-auto text-sm text-slate-300">
+                      <h4 className="mb-1 text-xs font-semibold text-slate-500 uppercase">stdout</h4>
+                      <pre className="max-h-64 overflow-auto text-sm text-slate-300 whitespace-pre-wrap">
                         {result.logs.stdout}
                       </pre>
                     </div>
                   )}
                   {result.logs.stderr && (
                     <div>
-                      <h4 className="mb-1 text-xs font-semibold text-red-400 uppercase">
-                        stderr
-                      </h4>
-                      <pre className="max-h-48 overflow-auto text-sm text-red-200">
+                      <h4 className="mb-1 text-xs font-semibold text-red-400 uppercase">stderr</h4>
+                      <pre className="max-h-64 overflow-auto text-sm text-red-200 whitespace-pre-wrap">
                         {result.logs.stderr}
                       </pre>
                     </div>
                   )}
                 </div>
               </details>
-            )}
-
-            {/* Failure Cards */}
-            {result.failures && result.failures.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-white">
-                  Failure Analysis
-                </h2>
-                {result.failures.map((failure, i) => (
-                  <FailureCard key={i} failure={failure} index={i} />
-                ))}
-              </div>
             )}
           </>
         )}
@@ -395,24 +325,180 @@ const steps = [
   },
   {
     icon: "🧪",
-    title: "Run Test Suite",
+    title: "Run All Test Suites",
     description:
-      "The test suite runs with the auto-detected test runner. Results are captured and analyzed for any failures.",
+      "We recursively scan all subdirectories, find every test fixture, and run each suite independently.",
   },
   {
     icon: "🤖",
     title: "AI Analysis & Fixes",
     description:
-      "Google Gemini AI analyzes failures, pinpoints root causes, and suggests specific code fixes you can apply.",
+      "Google Gemini AI analyzes each failure, pinpoints root causes, and suggests specific code fixes.",
   },
 ];
 
+/* ===================================================================
+   Overall Summary Banner Component
+   =================================================================== */
+function OverallSummaryBanner({ result }: { result: TestResult }) {
+  const { success, summary } = result;
+
+  return (
+    <div
+      className={`mb-6 rounded-xl border p-6 ${
+        success
+          ? "border-emerald-500/30 bg-emerald-500/10"
+          : "border-red-500/30 bg-red-500/10"
+      }`}
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">{success ? "✅" : "❌"}</span>
+          <div>
+            <h2 className="text-lg font-semibold text-white">
+              {success ? "All Tests Passed!" : "Some Tests Failed"}
+            </h2>
+            {summary && (
+              <p className="text-sm text-slate-400">
+                {summary.total} test{summary.total !== 1 ? "s" : ""} total
+                {" · "}
+                <span className="text-emerald-400">
+                  {summary.passed} passed
+                </span>
+                {summary.failed > 0 && (
+                  <>
+                    {" · "}
+                    <span className="text-red-400">
+                      {summary.failed} failed
+                    </span>
+                  </>
+                )}
+              </p>
+            )}
+          </div>
+        </div>
+        {summary && (
+          <div className="flex gap-3">
+            <CountBox value={summary.passed} label="Passed" color="emerald" />
+            <CountBox value={summary.failed} label="Failed" color="red" />
+            <CountBox value={summary.total} label="Total" color="white" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CountBox({
+  value,
+  label,
+  color,
+}: {
+  value: number;
+  label: string;
+  color: "emerald" | "red" | "white";
+}) {
+  const textColor = {
+    emerald: "text-emerald-400",
+    red: "text-red-400",
+    white: "text-white",
+  }[color];
+
+  return (
+    <div className="rounded-lg bg-white/5 px-4 py-2 text-center min-w-[72px]">
+      <div className={`text-2xl font-bold ${textColor}`}>{value}</div>
+      <div className="text-xs text-slate-500">{label}</div>
+    </div>
+  );
+}
+
+/* ===================================================================
+   Suite Card Component — shows results for one test suite
+   =================================================================== */
+function SuiteCard({ suite, index }: { suite: TestSuiteResult; index: number }) {
+  const { summary, failures, name } = suite;
+  const suiteSuccess = summary.status === "passed";
+
+  const runnerIcons: Record<string, string> = {
+    npm: "🟨",
+    pytest: "🐍",
+    cargo: "🦀",
+    go: "🔷",
+    maven: "☕",
+    gradle: "☕",
+    rspec: "💎",
+    phpunit: "🐘",
+  };
+
+  const runnerIcon = runnerIcons[suite.runner ?? ""] ?? "🧪";
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden transition-all hover:border-white/20">
+      {/* Suite Header */}
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={`flex h-7 w-7 items-center justify-center rounded text-xs font-bold ${
+              suiteSuccess
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "bg-red-500/20 text-red-400"
+            }`}
+          >
+            {suiteSuccess ? "✓" : "✗"}
+          </div>
+          <span className="text-sm text-slate-400 font-mono">{index + 1}.</span>
+          <span className="font-semibold text-white">{runnerIcon}</span>
+          <span className="font-medium text-white">{name}</span>
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-700/50 px-2 py-0.5 text-xs font-mono text-slate-400">
+            {suite.runner}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">{summary.total} tests</span>
+          <span className="text-xs text-emerald-400">{summary.passed} ✓</span>
+          {summary.failed > 0 && (
+            <span className="text-xs text-red-400">{summary.failed} ✗</span>
+          )}
+        </div>
+      </div>
+
+      {/* Suite Counts */}
+      <div className="flex gap-2 px-5 py-3 border-b border-white/5">
+        <div className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1">
+          <span className="text-xs text-emerald-400">Passed:</span>
+          <span className="text-sm font-bold text-emerald-300">{summary.passed}</span>
+        </div>
+        {summary.failed > 0 && (
+          <div className="flex items-center gap-1.5 rounded-md bg-red-500/10 px-2.5 py-1">
+            <span className="text-xs text-red-400">Failed:</span>
+            <span className="text-sm font-bold text-red-300">{summary.failed}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Failure Cards for this suite */}
+      {failures && failures.length > 0 && (
+        <div className="divide-y divide-white/5">
+          {failures.map((failure, i) => (
+            <FailureCard key={i} failure={failure} suiteIndex={index} failureIndex={i} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ===================================================================
+   Failure Card Component — shows one failure with AI analysis
+   =================================================================== */
 function FailureCard({
   failure,
-  index,
+  suiteIndex,
+  failureIndex,
 }: {
   failure: TestFailure;
-  index: number;
+  suiteIndex: number;
+  failureIndex: number;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -422,7 +508,6 @@ function FailureCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for older browsers
       const textarea = document.createElement("textarea");
       textarea.value = failure.suggestedFix;
       document.body.appendChild(textarea);
@@ -434,17 +519,19 @@ function FailureCard({
     }
   }, [failure.suggestedFix]);
 
+  const globalIndex = `${suiteIndex + 1}.${failureIndex + 1}`;
+
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 transition-all hover:border-white/20">
+    <div className="px-5 py-4 transition-colors hover:bg-white/[0.02]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-red-500/20 text-xs font-bold text-red-400">
-            {index + 1}
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-red-500/20 text-[10px] font-bold text-red-400">
+            {globalIndex}
           </span>
-          <span className="font-medium text-white">{failure.test}</span>
+          <span className="text-sm font-medium text-white">{failure.test}</span>
         </div>
-        <span className="inline-flex items-center gap-1 rounded-md bg-slate-700/50 px-2 py-1 text-xs font-mono text-slate-300">
+        <span className="inline-flex items-center gap-1 rounded-md bg-slate-700/50 px-2 py-0.5 text-[11px] font-mono text-slate-400">
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
@@ -452,55 +539,55 @@ function FailureCard({
         </span>
       </div>
 
-      <div className="space-y-4 p-5">
-        {/* Error Message */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {/* Error */}
         <div>
-          <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-red-400">
+          <h5 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-red-400">
             Error
-          </h4>
-          <pre className="max-h-32 overflow-auto rounded-lg bg-red-950/40 p-3 text-sm text-red-200 ring-1 ring-red-500/20">
+          </h5>
+          <pre className="max-h-24 overflow-auto rounded-lg bg-red-950/40 p-2.5 text-xs text-red-200 ring-1 ring-red-500/20">
             {failure.error}
           </pre>
         </div>
 
         {/* Root Cause */}
         <div>
-          <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-blue-400">
+          <h5 className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-blue-400">
             Root Cause
-          </h4>
-          <div className="rounded-lg bg-blue-950/40 p-3 text-sm text-blue-200 ring-1 ring-blue-500/20">
+          </h5>
+          <div className="rounded-lg bg-blue-950/40 p-2.5 text-xs text-blue-200 ring-1 ring-blue-500/20 h-full">
             {failure.explanation}
           </div>
         </div>
 
         {/* Suggested Fix */}
         <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              Suggested Fix
-            </h4>
+          <div className="mb-1 flex items-center justify-between">
+            <h5 className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">
+              Fix
+            </h5>
             <button
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 rounded-md bg-white/10 px-3 py-1 text-xs font-medium text-slate-300 transition-all hover:bg-white/20 hover:text-white"
+              className="inline-flex items-center gap-1 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-medium text-slate-300 transition-all hover:bg-white/20 hover:text-white"
             >
               {copied ? (
                 <>
-                  <svg className="h-3.5 w-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3 w-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Copied!
                 </>
               ) : (
                 <>
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  Copy Fix
+                  Copy
                 </>
               )}
             </button>
           </div>
-          <pre className="max-h-64 overflow-auto rounded-lg bg-slate-950 p-4 text-sm text-emerald-200 ring-1 ring-emerald-500/20">
+          <pre className="max-h-32 overflow-auto rounded-lg bg-slate-950 p-2.5 text-xs text-emerald-200 ring-1 ring-emerald-500/20">
             <code>{failure.suggestedFix}</code>
           </pre>
         </div>
